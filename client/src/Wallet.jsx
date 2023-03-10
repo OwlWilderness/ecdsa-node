@@ -1,17 +1,19 @@
 import server from "./server";
 import * as secp from "ethereum-cryptography/secp256k1";
-import * as keccak256 from "ethereum-cryptography/keccak";
+import * as keccak from "ethereum-cryptography/keccak";
+import * as utils from "ethereum-cryptography/utils";
 
 function getAddress(privateKey) {
+  console.log(privateKey)
   const publicKey = secp.getPublicKey(privateKey);
 
-  //console.log(publicKey);
+  console.log(publicKey);
   const rest = publicKey.slice(1);
-  //console.log(rest);
-  const kek = keccak256(rest);
-  //console.log(kek);
-  const address = kek.slice(kek.length - 20);
-  //console.log(key);
+  console.log(rest);
+  const kek = keccak.keccak256(rest);
+  console.log(kek);
+  const address = utils.toHex(kek.slice(kek.length - 20));
+  console.log(address);
   return address;
 
 }
@@ -41,6 +43,7 @@ function Wallet({ address, setAddress, balance, setBalance, privateKey, setPriva
         <input placeholder="Type Private Key" value={privateKey} onChange={onChange}></input>
       </label>
 
+      <div> Address: {address} </div>
       <div className="balance">Balance: {balance}</div>
     </div>
   );

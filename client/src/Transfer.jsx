@@ -1,9 +1,14 @@
 import { useState } from "react";
 import server from "./server";
+import * as secp from "ethereum-cryptography/secp256k1";
+import * as keccak from "ethereum-cryptography/keccak";
+import * as utils from "ethereum-cryptography/utils";
 
-function Transfer({ address, setBalance }) {
+function Transfer({ address, setBalance, privateKey }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
+  const [msg,setMsg] = useState();
+  const [sig,setSig] = useState();
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
@@ -11,13 +16,21 @@ function Transfer({ address, setBalance }) {
     evt.preventDefault();
 
     try {
-      const {
-        data: { balance },
-      } = await server.post(`send`, {
+      const msg = keccak.keccak256(utils.utf8ToBytes(JSON.stringify({
         sender: address,
         amount: parseInt(sendAmount),
         recipient,
-      });
+      })));
+      setMsg(msg);
+
+      const sig = await secp.sign(msg, privateKey,{recovered:true});
+      setSig(sig);
+
+
+
+      const {
+        data: { balance },
+      } = await server.post(`send`, {msg: msg, sig: sig} );
       setBalance(balance);
     } catch (ex) {
       alert(ex.response.data.message);
@@ -45,6 +58,8 @@ function Transfer({ address, setBalance }) {
           onChange={setValue(setRecipient)}
         ></input>
       </label>
+
+      <div>msg:{msg}</div>
 
       <input type="submit" className="button" value="Transfer" />
     </form>
