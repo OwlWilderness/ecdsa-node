@@ -1,10 +1,11 @@
+
+const secp = require("ethereum-cryptography/secp256k1");
+const keccak = require("ethereum-cryptography/keccak");
+const utils = require("ethereum-cryptography/utils");
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = 3042;
-import * as secp from "ethereum-cryptography/secp256k1";
-import * as keccak from "ethereum-cryptography/keccak";
-import * as utils from "ethereum-cryptography/utils";
 
 app.use(cors());
 app.use(express.json());
@@ -26,11 +27,22 @@ app.post("/send", (req, res) => {
 
   //get the signature from client
   //recover the address and set as sender
-  console.log(req.body)
-  const { sender, recipient, amount } = req.body;
 
+  const { message, recipient } = req.body;
+
+  //console.log( "MSG",message)
+  //console.log( "SIG",message.sig)
+  //console.log( "REC", message.rec)
+  const amount = message.msg.amount;
+  const msgkek = keccak.keccak256(utils.utf8ToBytes(JSON.stringify(message.msg)));
+
+  const pubkey = secp.recoverPublicKey(msgkek, message.sig, message.rec);
+  //console.log("PUB", utils.toHex(pubkey))
+  const sender = getAddrFromPubKey(pubkey);
+  //console.log(sender)
   setInitialBalance(sender);
   setInitialBalance(recipient);
+
 
   if (balances[sender] < amount) {
     res.status(400).send({ message: "Not enough funds!" });
@@ -49,4 +61,17 @@ function setInitialBalance(address) {
   if (!balances[address]) {
     balances[address] = 0;
   }
+}
+
+function getAddrFromPubKey(publicKey) {
+
+
+  const rest = publicKey.slice(1);
+
+  const kek = keccak.keccak256(rest);
+
+  const address = utils.toHex(kek.slice(kek.length - 20));
+
+  return address;
+
 }

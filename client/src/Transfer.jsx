@@ -7,8 +7,6 @@ import * as utils from "ethereum-cryptography/utils";
 function Transfer({ address, setBalance, privateKey }) {
   const [sendAmount, setSendAmount] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [msg,setMsg] = useState();
-  const [sig,setSig] = useState();
 
   const setValue = (setter) => (evt) => setter(evt.target.value);
 
@@ -16,21 +14,26 @@ function Transfer({ address, setBalance, privateKey }) {
     evt.preventDefault();
 
     try {
-      const msg = keccak.keccak256(utils.utf8ToBytes(JSON.stringify({
+
+      const msg = {
         sender: address,
         amount: parseInt(sendAmount),
         recipient,
-      })));
-      setMsg(msg);
+      };
 
-      const sig = await secp.sign(msg, privateKey,{recovered:true});
-      setSig(sig);
+      const msgkek = keccak.keccak256(utils.utf8ToBytes(JSON.stringify(msg)));
+      //console.log("addr",address,"kek",msgkek)
+      const [signature, recoveryBit]= await secp.sign(msgkek, privateKey, {recovered:true});
 
 
 
+      //console.log(signature.toString())
+      
+      const message = {msg: msg, sig: utils.toHex(signature), rec: recoveryBit}
+      //console.log('m',message,'r',recipient)
       const {
         data: { balance },
-      } = await server.post(`send`, {msg: msg, sig: sig} );
+      } = await server.post(`send`, {message: message, recipient: recipient} );
       setBalance(balance);
     } catch (ex) {
       alert(ex.response.data.message);
@@ -58,8 +61,6 @@ function Transfer({ address, setBalance, privateKey }) {
           onChange={setValue(setRecipient)}
         ></input>
       </label>
-
-      <div>msg:{msg}</div>
 
       <input type="submit" className="button" value="Transfer" />
     </form>
